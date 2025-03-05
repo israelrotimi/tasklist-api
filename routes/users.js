@@ -1,12 +1,11 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const session = require("express-session")
 const router = express.Router();
 const db = require("../db/db")
 
 // Read all blog posts
 router.get("/", (req, res) => {
-  const query = `SELECT * FROM blogs`;
+  const query = `SELECT * FROM `;
   db.all(query, [], (err, rows) => {
     if (err){
       return res.status(500).send(err.message);
@@ -72,5 +71,32 @@ router.delete("/:id", (req, res) => {
     res.send(`deleted blog ${id}`)
   });
 });
+
+
+// Create a new user
+app.post("/users", async (req, res) => {
+  const { name, email } = req.body;
+  try {
+    const result = await db.query(
+      "INSERT INTO users (name, email) VALUES (?, ?)",
+      [name, email]
+    );
+    res.json({ id: result.insertId, name, email });
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// Get all users
+app.get("/users", async (req, res) => {
+  try {
+    const users = await db.query("SELECT * FROM users");
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+
 
 module.exports = router;

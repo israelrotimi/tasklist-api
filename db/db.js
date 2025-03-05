@@ -1,24 +1,27 @@
-const sqlite3 = require("sqlite3").verbose();
-const db = new sqlite3.Database(":memory:");
+import mariadb from "mariadb";
 
-db.serialize(() => {
-  db.run(`CREATE TABLE users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT,
-      email TEXT,
-      password,
-      blogs ARRAY
-    )
-    `);
-  db.run(`CREATE TABLE tasks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      task TEXT,
-      description TEXT,
-      completed BOOLEAN,
-      time Date.now()
-    )
-    `);
-});
+const pool = mariadb.createPool({
+  host: "localhost",      // Replace with your MariaDB host
+  user: "root",          // Your MariaDB username
+  password: "password",  // Your MariaDB password
+  database: "testdb",    // Your MariaDB database name
+  connectionLimit: 5,    // Max number of connections
 });
 
-module.exports = db;
+const db = {
+  query: async (sql, params) => {
+    let conn;
+    try {
+      conn = await pool.getConnection();
+      const result = await conn.query(sql, params);
+      return result;
+    } catch (err) {
+      console.error("Database Query Error:", err);
+      throw err;
+    } finally {
+      if (conn) conn.end(); // Release connection
+    }
+  },
+};
+
+export default db;

@@ -2,6 +2,39 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db/db")
 
+// Create a new task for a user
+app.post("/tasks", async (req, res) => {
+  const { title, description, user_id } = req.body;
+  try {
+    const userExists = await db.query("SELECT id FROM users WHERE id = ?", [user_id]);
+    if (userExists.length === 0) return res.status(400).json({ error: "User not found" });
+
+    const result = await db.query(
+      "INSERT INTO tasks (title, description, user_id) VALUES (?, ?, ?)",
+      [title, description, user_id]
+    );
+    res.json({ id: result.insertId, title, description, user_id });
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
+  }
+});
+// Get all tasks with user details
+app.get("/tasks", async (req, res) => {
+  try {
+    const tasks = await db.query(`
+      SELECT tasks.id, tasks.title, tasks.description, tasks.created_at,
+             users.id AS user_id, users.name AS user_name, users.email AS user_email
+      FROM tasks
+      JOIN users ON tasks.user_id = users.id
+    `);
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+
+
 // Read all blog posts
 router.get("/", (req, res) => {
   const query = `SELECT * FROM blogs`;

@@ -3,100 +3,61 @@ const bcrypt = require("bcryptjs");
 const router = express.Router();
 const db = require("../db/db")
 
-// Read all blog posts
-router.get("/", (req, res) => {
-  const query = `SELECT * FROM `;
-  db.all(query, [], (err, rows) => {
-    if (err){
-      return res.status(500).send(err.message);
-    }
-    res.send(rows);
-  });
-});
-
-// Create a new blog post
-router.post("/new", (req, res) => {
-  const { title, content } = req.body;
-  const query = `INSERT INTO blogs (title, content) VALUES (?, ?)`;
-  db.run(query, [title, content], function(err) {
-      if (err){
-        return res.status(500).send(err.message);
-      }
-      res.status(201).send({id: this.lastID});
-  })
-});
-
-// Get a single blog post by id
-router.get("/:id", (req, res) => {
-  const { id } = req.params;
-  const query = `SELECT * FROM blogs WHERE id = ?`;
-  db.get(query, [id], (err, row) => {
-    if (err){
-      return res.status(500).send(err.message);
-    }
-    if (!row) {
-      return res.status(404).send("Blog post not found");
-    }
-    res.send(row);
-  });
-});
-
-// Update blog post by id
-router.put("/:id", (req, res) => {
-  const { id } = req.params;
-  const { title, content } = req.body;
-  const query = `UPDATE blogs SET title = ?, content = ? WHERE id = ?`;
-  db.run(query, [title, content, id], (err) => {
-    if (err) {
-      return res.status(500).send(err.message);
-    }
-    if (this.changes === 0) {
-      return res.status(404).send("Blog post not found");
-    }
-  res.send(`blog ${id} updated successfully`)
-  });
-});
-
-// Delete a blog post by id
-router.delete("/:id", (req, res) => {
-  const { id } = req.params;
-  const query = `DELETE FROM blogs WHERE id = ?`;
-  db.run(query, [id], (err) => {
-    if(err){
-      return res.status(500).send(err.message);
-    }
-    if(this.changes === 0){
-      return res.status(404).send("Task not found");
-    }
-    res.send(`deleted blog ${id}`)
-  });
-});
-
 
 // Create a new user
-app.post("/users", async (req, res) => {
-  const { name, email } = req.body;
+router.post("/new", async (req, res) => {
+  const { name, email,password } = req.body;
+  // Check of email already exits
   try {
-    const result = await db.query(
-      "INSERT INTO users (name, email) VALUES (?, ?)",
-      [name, email]
+    const query = `SELECT * FROM users where email = ?`;
+    const result = db.query(query, [email])
+  })
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).send("error creating user");
+  }
+  if(result !== ""){
+    res.status(409).send("Email already in use");
+  } else {
+    // Else hash password and insert result into users Table
+    try {
+    await password = bcrypt.hash(password, 10);
+    const newQuery = `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`
+    await db.query(newQuery, [name, email, password])
+    res.send("User created successfully");
+    } catch(err){
+      console.log(err.message)
+      res.status(500).send("error creating user");
+    }
+  }
+});
+
+// Log in a user
+router.post("/users", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await db.query(
+      "SELECT * FROM users WHERE email = (?)",
+      [email]
     );
-    res.json({ id: result.insertId, name, email });
+    if(!user){
+      return res.status(404).send("User doesn't exist");
+    }
+    bcrypt.compare(password, user.password, (err, result) => {
+      if(error){
+        console.error("Error comparing passwords: ", err)
+        return;
+      }
+      if(result) {
+        // redirect them to /tasks
+      }
+      else {
+        res.status(400).send("Invalid credentials");
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: "Database error" });
   }
 });
-
-// Get all users
-app.get("/users", async (req, res) => {
-  try {
-    const users = await db.query("SELECT * FROM users");
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ error: "Database error" });
-  }
-});
-
-
 
 module.exports = router;
